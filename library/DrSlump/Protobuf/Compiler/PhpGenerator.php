@@ -518,7 +518,7 @@ class PhpGenerator extends AbstractGenerator
 
         $typehint = '';
         $typedoc = $this->getJavaDocType($field);
-        if (0 === strpos($typedoc, '\\')) {
+        if (0 === strpos($typedoc, '\\') && $typedoc[strlen($typedoc) - 1] !== ']') {
             $typehint = $typedoc;
         }
 
@@ -566,7 +566,7 @@ class PhpGenerator extends AbstractGenerator
         $s[]= " * @param $typedoc \$value";
         $s[]= " * @return \\" . $this->normalizeNS($ns);
         $s[]= " */";
-        $s[]= "public function set$camel($typehint \$value, \$idx = NULL){";
+        $s[]= "public function set$camel(\$value, \$idx = NULL){";
         $s[]= "  return \$this->_set($tag, \$value, \$idx);";
         $s[]= "}";
         $s[]= "";
@@ -624,10 +624,12 @@ class PhpGenerator extends AbstractGenerator
 
     protected function getJavaDocType(proto\FieldDescriptorProto $field)
     {
+        $repeated = $field->getLabel() === Protobuf::RULE_REPEATED;
+
         switch ($field->getType()) {
         case Protobuf::TYPE_DOUBLE:
         case Protobuf::TYPE_FLOAT:
-            return 'float';
+            return $repeated ? 'float[]' : 'float';
         case Protobuf::TYPE_INT64:
         case Protobuf::TYPE_UINT64:
         case Protobuf::TYPE_INT32:
@@ -638,15 +640,17 @@ class PhpGenerator extends AbstractGenerator
         case Protobuf::TYPE_SFIXED64:
         case Protobuf::TYPE_SINT32:
         case Protobuf::TYPE_SINT64:
-            return 'int';
+            return $repeated ? 'int[]' : 'int';
         case Protobuf::TYPE_BOOL:
-            return 'boolean';
+            return $repeated ? 'boolean[]' : 'boolean';
         case Protobuf::TYPE_STRING:
-            return 'string';
+            return $repeated ? 'string[]' : 'string';
         case Protobuf::TYPE_MESSAGE:
-            return '\\' . $this->normalizeNS($field->getTypeName());
+            return $repeated
+                ? '\\' . $this->normalizeNS($field->getTypeName()) . '[]'
+                : '\\' . $this->normalizeNS($field->getTypeName());
         case Protobuf::TYPE_BYTES:
-            return 'string';
+            return $repeated ? 'string[]' : 'string';
         case Protobuf::TYPE_ENUM:
             return 'int - \\' . $this->normalizeNS($field->getTypeName());
 
@@ -690,3 +694,4 @@ class PhpGenerator extends AbstractGenerator
         return $namespace;
     }
 }
+
